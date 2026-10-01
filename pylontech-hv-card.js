@@ -1,4 +1,4 @@
-const CARD_VERSION = "1.0.3";
+const CARD_VERSION = "1.1.0";
 
 const DEFAULT_CONFIG = {
   name: "Pylontech HV BMS",
@@ -6,6 +6,10 @@ const DEFAULT_CONFIG = {
   show_cells: false,
   show_diagnostics: true,
   show_source_bmu: true,
+  show_header_icon: true,
+  show_energy: true,
+  show_cell_health: true,
+  compact: false,
 };
 
 const IDS = {
@@ -36,6 +40,12 @@ const css = `
     border-radius:var(--ha-card-border-radius, 18px);
   }
   .head { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; margin-bottom:18px; }
+  .head-left { display:flex; gap:12px; align-items:center; min-width:0; }
+  .head-icon {
+    width:42px; height:42px; border-radius:13px; display:grid; place-items:center;
+    background:var(--secondary-background-color); flex:0 0 auto;
+  }
+  .head-icon ha-icon { color:var(--primary-color); --mdc-icon-size:24px; }
   .title { font-size:20px; font-weight:650; line-height:1.2; }
   .subtitle { color:var(--secondary-text-color); font-size:13px; margin-top:4px; }
   .status {
@@ -67,7 +77,10 @@ const css = `
   .soc { font-size:38px; font-weight:700; letter-spacing:-1px; }
   .label { color:var(--secondary-text-color); font-size:13px; }
   .power { font-size:28px; font-weight:700; margin-top:4px; }
-  .flow { color:var(--secondary-text-color); margin-top:3px; font-size:13px; }
+  .power.charge { color:var(--success-color,#43a047); }
+  .power.discharge { color:var(--primary-text-color); }
+  .flow { color:var(--secondary-text-color); margin-top:3px; font-size:13px; display:flex; align-items:center; gap:5px; }
+  .flow ha-icon { --mdc-icon-size:16px; }
   .metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:14px; }
   .metric { padding:12px; border-radius:13px; background:var(--secondary-background-color); min-width:0; }
   .metric .v { font-size:clamp(15px, 4cqi, 17px); font-weight:650; white-space:nowrap; }
@@ -99,6 +112,13 @@ const css = `
   .cell { background:var(--secondary-background-color); border-radius:9px; padding:8px 6px; text-align:center; font-size:11px; }
   .cell strong { display:block; color:var(--primary-text-color); font-size:12px; }
   .empty { color:var(--secondary-text-color); padding:12px 0 2px; font-size:13px; }
+  ha-card.compact { padding:14px; }
+  ha-card.compact .head { margin-bottom:12px; }
+  ha-card.compact .panel { padding:12px; }
+  ha-card.compact .hero { gap:10px; margin-bottom:10px; }
+  ha-card.compact .section { margin-top:10px; }
+  ha-card.compact .battery { width:52px; height:76px; }
+  ha-card.compact .soc { font-size:32px; }
   @container (max-width:680px) {
     ha-card { padding:16px; }
     .hero { grid-template-columns:1fr; }
@@ -338,11 +358,14 @@ class PylontechHvCard extends HTMLElement {
 
     this.shadowRoot.innerHTML = `
       <style>${css}</style>
-      <ha-card>
+      <ha-card class="${this._config.compact ? "compact" : ""}">
         <div class="head">
-          <div>
-            <div class="title" id="title"></div>
-            <div class="subtitle">Pylontech HV Batterie</div>
+          <div class="head-left">
+            ${this._config.show_header_icon ? '<div class="head-icon"><ha-icon icon="mdi:battery-high"></ha-icon></div>' : ""}
+            <div>
+              <div class="title" id="title"></div>
+              <div class="subtitle">Pylontech HV Batterie</div>
+            </div>
           </div>
           <div class="status" id="status">Normal</div>
         </div>
@@ -354,7 +377,7 @@ class PylontechHvCard extends HTMLElement {
               <div>
                 <div class="soc" id="soc">—</div>
                 <div class="label">Ladezustand</div>
-                <div class="label" id="energy" style="margin-top:7px"></div>
+${this._config.show_energy ? '<div class="label" id="energy" style="margin-top:7px"></div>' : ""}
               </div>
             </div>
           </div>
@@ -362,7 +385,7 @@ class PylontechHvCard extends HTMLElement {
           <div class="panel">
             <div class="label">Momentane Leistung</div>
             <div class="power" id="power">—</div>
-            <div class="flow" id="flow">Leistung unbekannt</div>
+            <div class="flow"><ha-icon id="flow-icon" icon="mdi:minus"></ha-icon><span id="flow">Leistung unbekannt</span></div>
             <div class="metrics">
               <div class="metric"><div class="v" id="voltage">—</div><div class="k">Spannung</div></div>
               <div class="metric"><div class="v" id="current">—</div><div class="k">Strom</div></div>
@@ -371,6 +394,7 @@ class PylontechHvCard extends HTMLElement {
           </div>
         </div>
 
+        ${this._config.show_cell_health ? `
         <div class="panel section">
           <div class="section-title">Zellgesundheit</div>
           <div class="cellline">
@@ -383,7 +407,7 @@ class PylontechHvCard extends HTMLElement {
             <div class="metric"><div class="v" id="temp-high">—</div><div class="k">Höchste Zelltemperatur</div><div class="source" id="temp-high-source"></div></div>
             <div class="metric"><div class="v" id="temp-delta">—</div><div class="k">Zelltemperatur-Differenz</div></div>
           </div>
-        </div>
+        </div>` : ""}
 
         ${this._config.show_diagnostics ? `
         <div class="panel section">
@@ -439,6 +463,20 @@ class PylontechHvCard extends HTMLElement {
     this._setText("energy", energy === null ? "" : (energy / 1000).toFixed(2) + " kWh gespeichert");
     this._setText("power", power === null ? "—" : (power / 1000).toFixed(2) + " kW");
     this._setText("flow", flow);
+
+    const powerElement = this.shadowRoot.getElementById("power");
+    if (powerElement) {
+      powerElement.classList.toggle("charge", power !== null && power > 30);
+      powerElement.classList.toggle("discharge", power !== null && power < -30);
+    }
+
+    const flowIcon = this.shadowRoot.getElementById("flow-icon");
+    if (flowIcon) {
+      flowIcon.setAttribute("icon",
+        power === null || Math.abs(power) < 30 ? "mdi:minus" :
+        power > 0 ? "mdi:battery-arrow-up" : "mdi:battery-arrow-down"
+      );
+    }
     this._setText("voltage", voltage === null ? "—" : voltage.toFixed(1) + " V");
     this._setText("current", current === null ? "—" : current.toFixed(1) + " A");
     this._setText("temperature", temp === null ? "—" : temp.toFixed(1) + " °C");
@@ -553,6 +591,10 @@ class PylontechHvCardEditor extends HTMLElement {
         <div class="row"><label>Zellen anzeigen</label><ha-switch id="cells" ${this._config.show_cells ? "checked" : ""}></ha-switch></div>
         <div class="row"><label>Diagnose anzeigen</label><ha-switch id="diag" ${this._config.show_diagnostics ? "checked" : ""}></ha-switch></div>
         <div class="row"><label>BMU-Herkunft anzeigen</label><ha-switch id="sourcebmu" ${this._config.show_source_bmu ? "checked" : ""}></ha-switch></div>
+        <div class="row"><label>Header-Icon anzeigen</label><ha-switch id="headericon" ${this._config.show_header_icon ? "checked" : ""}></ha-switch></div>
+        <div class="row"><label>Gespeicherte Energie anzeigen</label><ha-switch id="energytoggle" ${this._config.show_energy ? "checked" : ""}></ha-switch></div>
+        <div class="row"><label>Zellgesundheit anzeigen</label><ha-switch id="cellhealth" ${this._config.show_cell_health ? "checked" : ""}></ha-switch></div>
+        <div class="row"><label>Kompakte Ansicht</label><ha-switch id="compact" ${this._config.compact ? "checked" : ""}></ha-switch></div>
       </div>
     `;
 
@@ -567,6 +609,10 @@ class PylontechHvCardEditor extends HTMLElement {
     this.shadowRoot.getElementById("cells").addEventListener("change", (e) => this._changed("show_cells", e.target.checked));
     this.shadowRoot.getElementById("diag").addEventListener("change", (e) => this._changed("show_diagnostics", e.target.checked));
     this.shadowRoot.getElementById("sourcebmu").addEventListener("change", (e) => this._changed("show_source_bmu", e.target.checked));
+    this.shadowRoot.getElementById("headericon").addEventListener("change", (e) => this._changed("show_header_icon", e.target.checked));
+    this.shadowRoot.getElementById("energytoggle").addEventListener("change", (e) => this._changed("show_energy", e.target.checked));
+    this.shadowRoot.getElementById("cellhealth").addEventListener("change", (e) => this._changed("show_cell_health", e.target.checked));
+    this.shadowRoot.getElementById("compact").addEventListener("change", (e) => this._changed("compact", e.target.checked));
   }
 }
 
