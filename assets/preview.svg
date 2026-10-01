@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#0f151c"/>
+      <stop offset="1" stop-color="#18232e"/>
+    </linearGradient>
+    <linearGradient id="bat" x1="0" x2="1">
+      <stop offset="0" stop-color="#62d77f"/>
+      <stop offset="1" stop-color="#38a9ff"/>
+    </linearGradient>
+    <style>
+      .t{font-family:Arial,Helvetica,sans-serif;fill:#f5f7fa}
+      .s{font-family:Arial,Helvetica,sans-serif;fill:#9ba8b5}
+      .p{fill:#151e27;stroke:#2a3744;stroke-width:2}
+      .m{fill:#202b35}
+    </style>
+  </defs>
+  <rect width="1280" height="720" rx="28" fill="url(#bg)"/>
+  <rect x="36" y="34" width="1208" height="652" rx="26" fill="#111922" stroke="#2a3744" stroke-width="2"/>
+  <rect x="68" y="66" width="54" height="54" rx="15" fill="#202b35"/>
+  <rect x="84" y="78" width="22" height="30" rx="5" fill="none" stroke="url(#bat)" stroke-width="5"/>
+  <text x="142" y="89" class="t" font-size="28" font-weight="700">Pylontech HV BMS</text>
+  <text x="142" y="115" class="s" font-size="15">Home Assistant Lovelace card</text>
+  <rect x="1095" y="69" width="106" height="42" rx="21" fill="#173b27"/>
+  <text x="1122" y="96" class="t" font-size="15" font-weight="700">Normal</text>
+
+  <rect x="68" y="148" width="350" height="215" rx="22" class="p"/>
+  <rect x="98" y="187" width="74" height="112" rx="12" fill="none" stroke="#e9edf1" stroke-width="5"/>
+  <rect x="108" y="224" width="54" height="65" rx="6" fill="url(#bat)"/>
+  <text x="202" y="220" class="t" font-size="54" font-weight="700">89 %</text>
+  <text x="202" y="252" class="s" font-size="17">State of charge</text>
+  <text x="202" y="285" class="t" font-size="19">21.36 kWh</text>
+  <text x="202" y="311" class="s" font-size="14">stored energy</text>
+
+  <rect x="438" y="148" width="394" height="215" rx="22" class="p"/>
+  <text x="468" y="184" class="s" font-size="17">Instant power</text>
+  <text x="468" y="235" class="t" font-size="46" font-weight="700">-0.35 kW</text>
+  <text x="468" y="268" class="s" font-size="16">Discharging</text>
+  <rect x="468" y="292" width="103" height="48" rx="12" class="m"/>
+  <rect x="584" y="292" width="103" height="48" rx="12" class="m"/>
+  <rect x="700" y="292" width="103" height="48" rx="12" class="m"/>
+  <text x="482" y="316" class="t" font-size="16" font-weight="700">500.0 V</text>
+  <text x="598" y="316" class="t" font-size="16" font-weight="700">-0.7 A</text>
+  <text x="714" y="316" class="t" font-size="16" font-weight="700">40.0 °C</text>
+  <text x="482" y="334" class="s" font-size="11">Voltage</text>
+  <text x="598" y="334" class="s" font-size="11">Current</text>
+  <text x="714" y="334" class="s" font-size="11">BMS temp.</text>
+
+  <rect x="852" y="148" width="349" height="215" rx="22" class="p"/>
+  <text x="882" y="185" class="t" font-size="19" font-weight="700">System status</text>
+  <circle cx="906" cy="236" r="18" fill="#56d778"/>
+  <path d="m897 236 7 7 12-15" fill="none" stroke="#0d1a12" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="938" y="232" class="t" font-size="18" font-weight="700">Battery operating normally</text>
+  <text x="938" y="258" class="s" font-size="14">No active warnings</text>
+  <text x="882" y="307" class="s" font-size="14">Automatic warning detection</text>
+  <text x="882" y="330" class="s" font-size="14">Responsive • Local • No cloud dependency</text>
+
+  <rect x="68" y="386" width="764" height="252" rx="22" class="p"/>
+  <text x="98" y="424" class="t" font-size="20" font-weight="700">Cell health</text>
+  <rect x="98" y="450" width="212" height="79" rx="15" class="m"/>
+  <text x="116" y="476" class="s" font-size="13">Lowest cell voltage</text>
+  <text x="116" y="505" class="t" font-size="22" font-weight="700">3.328 V</text>
+  <text x="116" y="522" class="s" font-size="11">from BMU 2</text>
+  <text x="347" y="479" class="t" font-size="28" font-weight="700">7 mV</text>
+  <text x="351" y="503" class="s" font-size="12">difference</text>
+  <rect x="470" y="450" width="212" height="79" rx="15" class="m"/>
+  <text x="488" y="476" class="s" font-size="13">Highest cell voltage</text>
+  <text x="488" y="505" class="t" font-size="22" font-weight="700">3.335 V</text>
+  <text x="488" y="522" class="s" font-size="11">from BMU 7</text>
+  <rect x="98" y="551" width="174" height="58" rx="14" class="m"/>
+  <rect x="286" y="551" width="174" height="58" rx="14" class="m"/>
+  <rect x="474" y="551" width="208" height="58" rx="14" class="m"/>
+  <text x="114" y="578" class="t" font-size="18" font-weight="700">28.0 °C</text>
+  <text x="302" y="578" class="t" font-size="18" font-weight="700">33.0 °C</text>
+  <text x="490" y="578" class="t" font-size="18" font-weight="700">5.0 K</text>
+  <text x="114" y="598" class="s" font-size="11">Lowest cell temp.</text>
+  <text x="302" y="598" class="s" font-size="11">Highest cell temp.</text>
+  <text x="490" y="598" class="s" font-size="11">Temperature delta</text>
+
+  <rect x="852" y="386" width="349" height="252" rx="22" class="p"/>
+  <text x="882" y="424" class="t" font-size="20" font-weight="700">Modular configuration</text>
+  <text x="882" y="463" class="s" font-size="14">✓ BMU source labels</text>
+  <text x="882" y="493" class="s" font-size="14">✓ Cell health section</text>
+  <text x="882" y="523" class="s" font-size="14">✓ BMU overview</text>
+  <text x="882" y="553" class="s" font-size="14">✓ Individual cell details</text>
+  <text x="882" y="583" class="s" font-size="14">✓ Compact layout</text>
+  <text x="882" y="613" class="s" font-size="14">✓ Visual Lovelace editor</text>
+</svg>
