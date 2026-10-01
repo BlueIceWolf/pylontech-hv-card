@@ -1,4 +1,4 @@
-const CARD_VERSION = "0.1.2";
+const CARD_VERSION = "0.1.3";
 
 const DEFAULT_CONFIG = {
   name: "Pylontech HV BMS",
@@ -156,7 +156,16 @@ class PylontechHvCard extends HTMLElement {
       .map((entityId) => {
         const state = this._hass.states?.[entityId];
         if (!state) return `${entityId}:missing`;
-        return `${entityId}:${state.state}:${state.last_updated || ""}:${JSON.stringify(state.attributes || {})}`;
+        const attrs = state.attributes || {};
+        const relevantAttrs = entityId === this._entities?.[IDS.warning]
+          ? {
+              meldung: attrs.meldung,
+              zell_delta_v: attrs.zell_delta_v,
+              temperatur_delta_k: attrs.temperatur_delta_k,
+              fehlercode: attrs.fehlercode,
+            }
+          : {};
+        return `${entityId}:${state.state}:${JSON.stringify(relevantAttrs)}`;
       })
       .join("|");
   }
