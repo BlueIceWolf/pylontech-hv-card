@@ -1,4 +1,4 @@
-const CARD_VERSION = "0.1.6";
+const CARD_VERSION = "1.0.2";
 
 const DEFAULT_CONFIG = {
   name: "Pylontech HV BMS",
@@ -76,6 +76,7 @@ const css = `
   .cellline { display:grid; grid-template-columns:1fr auto 1fr; gap:10px; align-items:center; }
   .cellbox { padding:12px; background:var(--secondary-background-color); border-radius:13px; }
   .cellbox.right { text-align:right; }
+  .source { color:var(--secondary-text-color); font-size:10px; margin-top:4px; line-height:1.25; }
   .delta { text-align:center; font-size:13px; color:var(--secondary-text-color); }
   .delta strong { display:block; color:var(--primary-text-color); font-size:18px; }
   .warning {
@@ -270,6 +271,30 @@ class PylontechHvCard extends HTMLElement {
     return rows.sort((a,b) => Number(a.bmu) - Number(b.bmu) || a.cell - b.cell);
   }
 
+  _findBmuForExtreme(sensorKey, targetValue) {
+    if (targetValue === null || targetValue === undefined) return null;
+
+    let best = null;
+    let bestDiff = Infinity;
+
+    for (const [key, entityId] of Object.entries(this._entities || {})) {
+      const match = key.match(new RegExp("^" + sensorKey + "_bmu_(.+)$"));
+      if (!match) continue;
+
+      const value = Number(this._hass?.states?.[entityId]?.state);
+      if (!Number.isFinite(value)) continue;
+
+      const diff = Math.abs(value - targetValue);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        best = match[1];
+      }
+    }
+
+    // Module values should normally match exactly; allow a tiny rounding tolerance.
+    return bestDiff <= 0.005 ? best : null;
+  }
+
   _render() {
     if (!this.shadowRoot || !this._config || !this._hass) return;
 
@@ -348,13 +373,13 @@ class PylontechHvCard extends HTMLElement {
         <div class="panel section">
           <div class="section-title">Zellgesundheit</div>
           <div class="cellline">
-            <div class="cellbox"><div class="label">Niedrigste Zelle</div><strong id="cell-low">—</strong></div>
+            <div class="cellbox"><div class="label">Niedrigste Zellspannung</div><strong id="cell-low">—</strong><div class="source" id="cell-low-source"></div></div>
             <div class="delta"><strong id="cell-delta">—</strong>Differenz</div>
-            <div class="cellbox right"><div class="label">Höchste Zelle</div><strong id="cell-high">—</strong></div>
+            <div class="cellbox right"><div class="label">Höchste Zellspannung</div><strong id="cell-high">—</strong><div class="source" id="cell-high-source"></div></div>
           </div>
           <div class="metrics">
-            <div class="metric"><div class="v" id="temp-low">—</div><div class="k">Niedrigste Zelltemperatur</div></div>
-            <div class="metric"><div class="v" id="temp-high">—</div><div class="k">Höchste Zelltemperatur</div></div>
+            <div class="metric"><div class="v" id="temp-low">—</div><div class="k">Niedrigste Zelltemperatur</div><div class="source" id="temp-low-source"></div></div>
+            <div class="metric"><div class="v" id="temp-high">—</div><div class="k">Höchste Zelltemperatur</div><div class="source" id="temp-high-source"></div></div>
             <div class="metric"><div class="v" id="temp-delta">—</div><div class="k">Zelltemperatur-Differenz</div></div>
           </div>
         </div>
@@ -422,6 +447,16 @@ class PylontechHvCard extends HTMLElement {
     this._setText("temp-low", tempLow === null ? "—" : tempLow.toFixed(1) + " °C");
     this._setText("temp-high", tempHigh === null ? "—" : tempHigh.toFixed(1) + " °C");
     this._setText("temp-delta", tempDelta === null ? "—" : tempDelta.toFixed(1) + " K");
+
+    const cellLowBmu = this._findBmuForExtreme("cell_volt_low", cellLow);
+    const cellHighBmu = this._findBmuForExtreme("cell_volt_high", cellHigh);
+    const tempLowBmu = this._findBmuForExtreme("cell_temp_low", tempLow);
+    const tempHighBmu = this._findBmuForExtreme("cell_temp_high", tempHigh);
+
+    this._setText("cell-low-source", cellLowBmu !== null ? "aus BMU " + cellLowBmu : "");
+    this._setText("cell-high-source", cellHighBmu !== null ? "aus BMU " + cellHighBmu : "");
+    this._setText("temp-low-source", tempLowBmu !== null ? "aus BMU " + tempLowBmu : "");
+    this._setText("temp-high-source", tempHighBmu !== null ? "aus BMU " + tempHighBmu : "");
 
     const fill = this.shadowRoot.getElementById("battery-fill");
     if (fill) fill.style.height = Math.max(0, Math.min(100, soc ?? 0)) * 0.84 + "px";
