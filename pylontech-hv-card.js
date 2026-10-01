@@ -1,4 +1,4 @@
-const CARD_VERSION = "0.1.4";
+const CARD_VERSION = "0.1.5";
 
 const DEFAULT_CONFIG = {
   name: "Pylontech HV BMS",
@@ -275,7 +275,7 @@ class PylontechHvCard extends HTMLElement {
 
     if (!this._config.entity) {
       if (!this._structureReady) {
-        this.shadowRoot.innerHTML = `<style>${css}</style><ha-card><div class="empty">Bitte eine Pylontech-Entität auswählen.</div></ha-card>`;
+        this.shadowRoot.innerHTML = `<style>${css}</style><ha-card><div class="empty">Wähle beim Einrichten irgendeinen Datenpunkt vom Pylontech HV BMS aus. Die restlichen Werte werden automatisch erkannt.</div></ha-card>`;
       }
       return;
     }
@@ -502,12 +502,15 @@ class PylontechHvCardEditor extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         .wrap{display:grid;gap:14px;padding:8px 0}
+        .hint{font-size:13px;line-height:1.45;color:var(--secondary-text-color);padding:10px 12px;border-radius:10px;background:var(--secondary-background-color)}
+        .hint strong{color:var(--primary-text-color)}
         .row{display:flex;align-items:center;justify-content:space-between;gap:18px}
         label{font-size:14px}
         input[type=text]{width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--divider-color);border-radius:8px;background:var(--card-background-color);color:var(--primary-text-color)}
       </style>
       <div class="wrap">
-        <ha-entity-picker id="entity" label="Pylontech Entität" allow-custom-entity></ha-entity-picker>
+        <div class="hint"><strong>Einfach irgendeinen Datenpunkt auswählen.</strong><br>Wähle eine beliebige Entität vom Pylontech HV BMS. Die Card erkennt automatisch alle weiteren Werte, Module und Warnungen desselben Batteriesystems.</div>
+        <ha-entity-picker id="entity" label="Datenpunkt vom Pylontech HV BMS" allow-custom-entity></ha-entity-picker>
         <input id="name" type="text" value="${this._config.name || ""}" placeholder="Name">
         <div class="row"><label>Module anzeigen</label><ha-switch id="modules" ${this._config.show_modules ? "checked" : ""}></ha-switch></div>
         <div class="row"><label>Zellen anzeigen</label><ha-switch id="cells" ${this._config.show_cells ? "checked" : ""}></ha-switch></div>
