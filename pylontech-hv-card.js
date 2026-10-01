@@ -369,8 +369,18 @@ class PylontechHvCardEditor extends HTMLElement {
   }
 
   set hass(hass) {
+    const firstRender = !this._hass;
     this._hass = hass;
-    this._render();
+
+    if (firstRender) {
+      this._render();
+      return;
+    }
+
+    const picker = this.shadowRoot?.getElementById("entity");
+    if (picker) {
+      picker.hass = hass;
+    }
   }
 
   _changed(key, value) {
