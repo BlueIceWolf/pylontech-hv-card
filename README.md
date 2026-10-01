@@ -1,81 +1,190 @@
-# Pylontech HV Card
+<p align="center">
+  <img src="assets/icon.svg" width="110" alt="Pylontech HV Card icon">
+</p>
 
-A modern Lovelace card for Home Assistant, designed for **Pylontech high-voltage battery systems** and the [Pylontech HV BMS integration](https://github.com/BlueIceWolf/home-assistant-pylontech-hv).
+<h1 align="center">Pylontech HV Card</h1>
 
-The card provides a clean overview of the battery state, power flow, cell health and BMS warnings without filling the dashboard with dozens of individual entities.
+<p align="center">
+  A modern Lovelace card for Pylontech high-voltage battery systems in Home Assistant.
+</p>
+
+<p align="center">
+  <img alt="HACS Custom" src="https://img.shields.io/badge/HACS-Custom-41BDF5?style=flat-square">
+  <img alt="Home Assistant" src="https://img.shields.io/badge/Home%20Assistant-Lovelace-18BCF2?style=flat-square">
+  <img alt="Version" src="https://img.shields.io/github/v/release/BlueIceWolf/pylontech-hv-card?style=flat-square">
+  <img alt="License" src="https://img.shields.io/github/license/BlueIceWolf/pylontech-hv-card?style=flat-square">
+</p>
+
+<p align="center">
+  Designed for the
+  <a href="https://github.com/BlueIceWolf/home-assistant-pylontech-hv">Pylontech HV BMS integration</a>.
+</p>
+
+![Pylontech HV Card preview](assets/preview.svg)
+
+## Overview
+
+Pylontech HV Card gives you a clean overview of the important values from your high-voltage battery without filling a dashboard with dozens of separate entities.
+
+Setup is intentionally simple: **select any entity belonging to your Pylontech HV BMS** and the card automatically discovers the related pack, BMU, cell and warning entities.
 
 ## Features
 
-- State of charge overview
+- State of charge
+- Stored energy
 - Battery voltage and current
-- Charge / discharge power
-- Pack temperature
-- Minimum and maximum cell voltage
+- Live charge / discharge power
+- BMS temperature
+- Lowest and highest cell voltage
 - Cell voltage difference
-- Minimum and maximum cell temperature
-- Temperature difference
-- Integrated warning display
+- Lowest and highest cell temperature
+- Cell temperature difference
+- Optional BMU source for min / max values
+- Integrated warning state
 - Optional BMU overview
-- Optional cell details
-- Automatic discovery of related entities from the selected Pylontech device
+- Optional individual cell overview
+- Responsive layout using container queries
+- Compact mode for narrow dashboard columns
+- Visual Lovelace editor
+- Automatic entity discovery
 - Home Assistant theme support
-- Responsive layout
 - No Mushroom dependency required
+- Local operation — no cloud service required by the card
 
 ## Requirements
 
 - Home Assistant
-- [Pylontech HV BMS](https://github.com/BlueIceWolf/home-assistant-pylontech-hv)
+- [Pylontech HV BMS for Home Assistant](https://github.com/BlueIceWolf/home-assistant-pylontech-hv)
+
+The companion integration currently targets Pylontech HV systems such as the **SC0500 / XHB_CMU_H7** family and exposes pack, BMU, cell and diagnostic entities.
 
 ## Installation
 
 ### HACS
 
-1. Open HACS.
-2. Add this repository as a custom repository.
-3. Select **Dashboard** as the category.
-4. Install **Pylontech HV Card**.
-5. Reload the browser if necessary.
+1. Open **HACS**.
+2. Go to **Frontend** / **Dashboard**.
+3. Add this repository as a **Custom repository**.
+4. Select **Dashboard** as the repository type.
+5. Install **Pylontech HV Card**.
+6. Reload Home Assistant or refresh the browser.
 
-## Basic configuration
+Repository:
 
-```yaml
-type: custom:pylontech-hv-card
-entity: sensor.pylontech_bms_battery
+```text
+https://github.com/BlueIceWolf/pylontech-hv-card
 ```
 
-The selected entity is used as an anchor. The card automatically discovers other entities belonging to the same Home Assistant device.
+## Quick start
 
-## Options
+Add the card through the Lovelace UI and select **any entity from your Pylontech HV BMS**.
+
+Or use YAML:
 
 ```yaml
 type: custom:pylontech-hv-card
-entity: sensor.pylontech_bms_battery
+entity: sensor.pylontech_bms_charge_ah
+```
+
+The selected entity is only used as an anchor. The card automatically finds the other entities belonging to the same Pylontech HV system.
+
+## Example configuration
+
+```yaml
+type: custom:pylontech-hv-card
+entity: sensor.pylontech_bms_charge_ah
 name: Pylontech HV BMS
+
 show_modules: true
 show_cells: false
 show_diagnostics: true
+show_source_bmu: true
+
+show_header_icon: true
+show_energy: true
+show_cell_health: true
+compact: false
 ```
+
+## Configuration options
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `entity` | required | Anchor entity from the Pylontech BMS device |
+| `entity` | required | Any entity belonging to the Pylontech HV BMS |
 | `name` | `Pylontech HV BMS` | Card title |
-| `show_modules` | `true` | Show BMU overview |
-| `show_cells` | `false` | Show individual cell voltages |
-| `show_diagnostics` | `true` | Show diagnostics and warning state |
+| `show_modules` | `true` | Show expandable BMU overview |
+| `show_cells` | `false` | Show expandable individual cell voltages |
+| `show_diagnostics` | `true` | Show system status and warnings |
+| `show_source_bmu` | `true` | Show which BMU provides min / max cell values |
+| `show_header_icon` | `true` | Show battery icon in the card header |
+| `show_energy` | `true` | Show stored energy below state of charge |
+| `show_cell_health` | `true` | Show the cell health section |
+| `compact` | `false` | Reduce padding and card height for compact dashboards |
+
+## Automatic discovery
+
+You do **not** need to configure every sensor manually.
+
+The card uses the selected entity to identify the matching Pylontech integration instance and automatically discovers available values such as:
+
+- SoC
+- voltage
+- current
+- power
+- BMS temperature
+- cell voltage min / max
+- cell temperature min / max
+- warning sensors
+- BMU values
+- individual cell voltages
+
+This also makes the card much easier to reuse across different Home Assistant installations.
+
+## BMU source information
+
+When `show_source_bmu` is enabled, the card can display where an extreme value comes from.
+
+Example:
+
+```text
+3.328 V
+Lowest cell voltage
+from BMU 2
+```
+
+The same applies to highest cell voltage and minimum / maximum cell temperature.
+
+## Responsive design
+
+The card automatically adapts to its actual Lovelace column width rather than only the browser width.
+
+On narrow dashboards, sections stack vertically and metric tiles resize to remain readable.
+
+For especially small layouts, enable:
+
+```yaml
+compact: true
+```
 
 ## Companion integration
 
-This card is primarily developed for:
+This card is developed alongside:
 
-[Pylontech HV BMS for Home Assistant](https://github.com/BlueIceWolf/home-assistant-pylontech-hv)
+**[BlueIceWolf/home-assistant-pylontech-hv](https://github.com/BlueIceWolf/home-assistant-pylontech-hv)**
 
-The integration currently supports the Pylontech SC0500 / XHB_CMU_H7 family and provides pack, BMU, cell and diagnostic entities.
+For the best experience, use both projects together.
 
-## Development status
+## Issues and feedback
 
-This project is currently in early development. Entity discovery and layouts may still change before version 1.0.
+If you find a bug or have an idea for another metric or layout option, please open an issue on GitHub.
+
+When reporting a display issue, it is helpful to include:
+
+- Home Assistant version
+- card version
+- screenshot
+- dashboard column width / device type
+- which Pylontech HV hardware is being used
 
 ## License
 
