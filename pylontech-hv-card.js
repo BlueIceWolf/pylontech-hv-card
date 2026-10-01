@@ -1,4 +1,4 @@
-const CARD_VERSION = "0.1.5";
+const CARD_VERSION = "0.1.6";
 
 const DEFAULT_CONFIG = {
   name: "Pylontech HV BMS",
@@ -340,7 +340,7 @@ class PylontechHvCard extends HTMLElement {
             <div class="metrics">
               <div class="metric"><div class="v" id="voltage">—</div><div class="k">Spannung</div></div>
               <div class="metric"><div class="v" id="current">—</div><div class="k">Strom</div></div>
-              <div class="metric"><div class="v" id="temperature">—</div><div class="k">Temperatur</div></div>
+              <div class="metric"><div class="v" id="temperature">—</div><div class="k">BMS-Temperatur</div></div>
             </div>
           </div>
         </div>
@@ -353,9 +353,9 @@ class PylontechHvCard extends HTMLElement {
             <div class="cellbox right"><div class="label">Höchste Zelle</div><strong id="cell-high">—</strong></div>
           </div>
           <div class="metrics">
-            <div class="metric"><div class="v" id="temp-low">—</div><div class="k">Zelle kalt</div></div>
-            <div class="metric"><div class="v" id="temp-high">—</div><div class="k">Zelle warm</div></div>
-            <div class="metric"><div class="v" id="temp-delta">—</div><div class="k">Temperatur-Delta</div></div>
+            <div class="metric"><div class="v" id="temp-low">—</div><div class="k">Niedrigste Zelltemperatur</div></div>
+            <div class="metric"><div class="v" id="temp-high">—</div><div class="k">Höchste Zelltemperatur</div></div>
+            <div class="metric"><div class="v" id="temp-delta">—</div><div class="k">Zelltemperatur-Differenz</div></div>
           </div>
         </div>
 
