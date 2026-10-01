@@ -1,4 +1,4 @@
-const CARD_VERSION = "0.1.3";
+const CARD_VERSION = "0.1.4";
 
 const DEFAULT_CONFIG = {
   name: "Pylontech HV BMS",
@@ -28,7 +28,7 @@ const IDS = {
 };
 
 const css = `
-  :host { display:block; }
+  :host { display:block; container-type:inline-size; }
   ha-card {
     overflow:hidden;
     padding:20px;
@@ -69,7 +69,7 @@ const css = `
   .flow { color:var(--secondary-text-color); margin-top:3px; font-size:13px; }
   .metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:14px; }
   .metric { padding:12px; border-radius:13px; background:var(--secondary-background-color); min-width:0; }
-  .metric .v { font-size:17px; font-weight:650; overflow:hidden; text-overflow:ellipsis; }
+  .metric .v { font-size:clamp(15px, 4cqi, 17px); font-weight:650; white-space:nowrap; }
   .metric .k { font-size:11px; margin-top:4px; color:var(--secondary-text-color); }
   .section { margin-top:14px; }
   .section-title { font-weight:650; margin:0 0 10px 2px; font-size:14px; }
@@ -97,12 +97,19 @@ const css = `
   .cell { background:var(--secondary-background-color); border-radius:9px; padding:8px 6px; text-align:center; font-size:11px; }
   .cell strong { display:block; color:var(--primary-text-color); font-size:12px; }
   .empty { color:var(--secondary-text-color); padding:12px 0 2px; font-size:13px; }
-  @media (max-width:600px) {
+  @container (max-width:680px) {
     ha-card { padding:16px; }
     .hero { grid-template-columns:1fr; }
-    .metrics { grid-template-columns:repeat(2,1fr); }
+    .metrics { grid-template-columns:repeat(3,minmax(0,1fr)); }
     .modules { grid-template-columns:1fr; }
     .cells { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  }
+  @container (max-width:420px) {
+    .metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .cellline { grid-template-columns:1fr; }
+    .cellbox.right { text-align:left; }
+    .delta { text-align:left; padding:0 2px; }
+    .cells { grid-template-columns:repeat(2,minmax(0,1fr)); }
   }
 `;
 
@@ -119,6 +126,7 @@ class PylontechHvCard extends HTMLElement {
     this._entities = {};
     this._registryLoaded = false;
     this._loadingRegistry = false;
+    this._structureReady = false;
   }
 
   setConfig(config) {
@@ -126,6 +134,7 @@ class PylontechHvCard extends HTMLElement {
     this._config = { ...DEFAULT_CONFIG, ...config };
     this._registryLoaded = false;
     this._entities = {};
+    this._structureReady = false;
     this._render();
   }
 
@@ -207,6 +216,7 @@ class PylontechHvCard extends HTMLElement {
       this._registryLoaded = true;
     } finally {
       this._loadingRegistry = false;
+      this._structureReady = false;
       this._render();
     }
   }
@@ -261,92 +271,76 @@ class PylontechHvCard extends HTMLElement {
   }
 
   _render() {
-    if (!this.shadowRoot || !this._config) return;
-    if (!this._hass) return;
+    if (!this.shadowRoot || !this._config || !this._hass) return;
 
     if (!this._config.entity) {
-      this.shadowRoot.innerHTML = `<style>${css}</style><ha-card><div class="empty">Bitte eine Pylontech-Entität auswählen.</div></ha-card>`;
+      if (!this._structureReady) {
+        this.shadowRoot.innerHTML = `<style>${css}</style><ha-card><div class="empty">Bitte eine Pylontech-Entität auswählen.</div></ha-card>`;
+      }
       return;
     }
 
     const anchor = this._hass.states[this._config.entity];
     if (!anchor) {
       this.shadowRoot.innerHTML = `<style>${css}</style><ha-card><div class="empty">Entität ${this._config.entity} wurde nicht gefunden.</div></ha-card>`;
+      this._structureReady = false;
       return;
     }
 
-    const soc = this._num(IDS.soc);
-    const voltage = this._num(IDS.voltage);
-    const current = this._num(IDS.current);
-    const power = this._num(IDS.power);
-    const temp = this._num(IDS.temperature);
-    const energy = this._num(IDS.energy);
-    const warning = this._warningInfo();
+    if (!this._structureReady) {
+      this._renderStructure();
+      this._structureReady = true;
+    }
 
-    const flow = power === null ? "Leistung unbekannt" :
-      Math.abs(power) < 30 ? "Ruhezustand" :
-      power > 0 ? "Laden" : "Entladen";
+    this._updateDom();
+  }
 
-    const powerText = power === null ? "—" : `${(power / 1000).toFixed(2)} kW`;
-    const cellLow = this._num(IDS.cellLow);
-    const cellHigh = this._num(IDS.cellHigh);
-    const cellDelta = this._num(IDS.cellDelta);
-    const tempLow = this._num(IDS.tempLow);
-    const tempHigh = this._num(IDS.tempHigh);
-    const tempDelta = this._num(IDS.tempDelta);
+  _renderStructure() {
     const modules = this._moduleRows();
     const cells = this._cellRows();
 
-    const moduleHtml = modules.map(([bmu, values]) => {
-      const get = (key, digits, unit) => {
-        const st = this._hass.states[values[key]];
-        const num = Number(st?.state);
-        return Number.isFinite(num) ? `${num.toFixed(digits)} ${unit}` : "—";
-      };
-      return `<div class="module">
-        <div class="module-head"><span>BMU ${bmu}</span><span>${get("charge_ah_perc",0,"%")}</span></div>
-        <div class="module-data">${get("volt",2,"V")} · ${get("temp",1,"°C")}</div>
-      </div>`;
-    }).join("");
+    const moduleHtml = modules.map(([bmu]) => `
+      <div class="module" data-bmu="${bmu}">
+        <div class="module-head"><span>BMU ${bmu}</span><span data-field="soc">—</span></div>
+        <div class="module-data"><span data-field="volt">—</span> · <span data-field="temp">—</span></div>
+      </div>
+    `).join("");
 
-    const cellHtml = cells.map((c) => {
-      const st = this._hass.states[c.entityId];
-      const n = Number(st?.state);
-      const v = Number.isFinite(n) ? n.toFixed(3) + " V" : "—";
-      return `<div class="cell">BMU ${c.bmu} · Z${c.cell}<strong>${v}</strong></div>`;
-    }).join("");
+    const cellHtml = cells.map((cell) => `
+      <div class="cell" data-cell="${cell.entityId}">BMU ${cell.bmu} · Z${cell.cell}<strong>—</strong></div>
+    `).join("");
 
     this.shadowRoot.innerHTML = `
       <style>${css}</style>
       <ha-card>
         <div class="head">
           <div>
-            <div class="title">${this._config.name}</div>
+            <div class="title" id="title"></div>
             <div class="subtitle">Pylontech HV Batterie</div>
           </div>
-          <div class="status ${warning.active ? "warn" : ""}">${warning.active ? "Warnung" : "Normal"}</div>
+          <div class="status" id="status">Normal</div>
         </div>
 
         <div class="hero">
           <div class="panel">
             <div class="socrow">
-              <div class="battery"><div class="fill" style="height:${Math.max(0,Math.min(100,soc ?? 0)) * .84}px"></div></div>
+              <div class="battery"><div class="fill" id="battery-fill"></div></div>
               <div>
-                <div class="soc">${soc === null ? "—" : Math.round(soc) + " %"}</div>
+                <div class="soc" id="soc">—</div>
                 <div class="label">Ladezustand</div>
-                ${energy !== null ? `<div class="label" style="margin-top:7px">${(energy/1000).toFixed(2)} kWh gespeichert</div>` : ""}
+                <div class="label" id="energy" style="margin-top:7px"></div>
               </div>
             </div>
           </div>
 
           <div class="panel">
             <div class="label">Momentane Leistung</div>
-            <div class="power">${powerText}</div>
-            <div class="flow">${flow}</div>
+            <div class="power" id="power">—</div>
+            <div class="flow" id="flow">Leistung unbekannt</div>
             <div class="metrics">
-              <div class="metric"><div class="v">${voltage === null ? "—" : voltage.toFixed(1)+" V"}</div><div class="k">Spannung</div></div>
-              <div class="metric"><div class="v">${current === null ? "—" : current.toFixed(1)+" A"}</div><div class="k">Strom</div></div>
-              <div class="metric"><div class="v">${temp === null ? "—" : temp.toFixed(1)+" °C"}</div><div class="k">Temperatur</div></div>
+              <div class="metric"><div class="v" id="voltage">—</div><div class="k">Spannung</div></div>
+              <div class="metric"><div class="v" id="current">—</div><div class="k">Strom</div></div>
+              <div class="metric"><div class="v" id="temperature">—</div><div class="k">Temperatur</div></div>
             </div>
           </div>
         </div>
@@ -354,23 +348,23 @@ class PylontechHvCard extends HTMLElement {
         <div class="panel section">
           <div class="section-title">Zellgesundheit</div>
           <div class="cellline">
-            <div class="cellbox"><div class="label">Niedrigste Zelle</div><strong>${cellLow === null ? "—" : cellLow.toFixed(3)+" V"}</strong></div>
-            <div class="delta"><strong>${cellDelta === null ? "—" : Math.round(cellDelta*1000)+" mV"}</strong>Differenz</div>
-            <div class="cellbox right"><div class="label">Höchste Zelle</div><strong>${cellHigh === null ? "—" : cellHigh.toFixed(3)+" V"}</strong></div>
+            <div class="cellbox"><div class="label">Niedrigste Zelle</div><strong id="cell-low">—</strong></div>
+            <div class="delta"><strong id="cell-delta">—</strong>Differenz</div>
+            <div class="cellbox right"><div class="label">Höchste Zelle</div><strong id="cell-high">—</strong></div>
           </div>
           <div class="metrics">
-            <div class="metric"><div class="v">${tempLow === null ? "—" : tempLow.toFixed(1)+" °C"}</div><div class="k">Zelle kalt</div></div>
-            <div class="metric"><div class="v">${tempHigh === null ? "—" : tempHigh.toFixed(1)+" °C"}</div><div class="k">Zelle warm</div></div>
-            <div class="metric"><div class="v">${tempDelta === null ? "—" : tempDelta.toFixed(1)+" K"}</div><div class="k">Temperatur-Delta</div></div>
+            <div class="metric"><div class="v" id="temp-low">—</div><div class="k">Zelle kalt</div></div>
+            <div class="metric"><div class="v" id="temp-high">—</div><div class="k">Zelle warm</div></div>
+            <div class="metric"><div class="v" id="temp-delta">—</div><div class="k">Temperatur-Delta</div></div>
           </div>
         </div>
 
         ${this._config.show_diagnostics ? `
         <div class="panel section">
           <div class="section-title">Systemzustand</div>
-          <div class="warning ${warning.active ? "active" : ""}">
-            <ha-icon icon="${warning.active ? "mdi:alert-circle" : "mdi:check-circle"}"></ha-icon>
-            <div class="warning-text"><strong>${warning.active ? "BMS-Warnung aktiv" : "Batterie arbeitet normal"}</strong>${warning.message}</div>
+          <div class="warning" id="warning-box">
+            <ha-icon id="warning-icon" icon="mdi:check-circle"></ha-icon>
+            <div class="warning-text"><strong id="warning-title">Batterie arbeitet normal</strong><span id="warning-message">Keine Warnung</span></div>
           </div>
         </div>` : ""}
 
@@ -388,6 +382,87 @@ class PylontechHvCard extends HTMLElement {
       </ha-card>
     `;
   }
+
+  _setText(id, value) {
+    const element = this.shadowRoot.getElementById(id);
+    if (element && element.textContent !== value) element.textContent = value;
+  }
+
+  _updateDom() {
+    const soc = this._num(IDS.soc);
+    const voltage = this._num(IDS.voltage);
+    const current = this._num(IDS.current);
+    const power = this._num(IDS.power);
+    const temp = this._num(IDS.temperature);
+    const energy = this._num(IDS.energy);
+    const cellLow = this._num(IDS.cellLow);
+    const cellHigh = this._num(IDS.cellHigh);
+    const cellDelta = this._num(IDS.cellDelta);
+    const tempLow = this._num(IDS.tempLow);
+    const tempHigh = this._num(IDS.tempHigh);
+    const tempDelta = this._num(IDS.tempDelta);
+    const warning = this._warningInfo();
+
+    const flow = power === null ? "Leistung unbekannt" :
+      Math.abs(power) < 30 ? "Ruhezustand" :
+      power > 0 ? "Laden" : "Entladen";
+
+    this._setText("title", this._config.name || "Pylontech HV BMS");
+    this._setText("status", warning.active ? "Warnung" : "Normal");
+    this._setText("soc", soc === null ? "—" : Math.round(soc) + " %");
+    this._setText("energy", energy === null ? "" : (energy / 1000).toFixed(2) + " kWh gespeichert");
+    this._setText("power", power === null ? "—" : (power / 1000).toFixed(2) + " kW");
+    this._setText("flow", flow);
+    this._setText("voltage", voltage === null ? "—" : voltage.toFixed(1) + " V");
+    this._setText("current", current === null ? "—" : current.toFixed(1) + " A");
+    this._setText("temperature", temp === null ? "—" : temp.toFixed(1) + " °C");
+    this._setText("cell-low", cellLow === null ? "—" : cellLow.toFixed(3) + " V");
+    this._setText("cell-high", cellHigh === null ? "—" : cellHigh.toFixed(3) + " V");
+    this._setText("cell-delta", cellDelta === null ? "—" : Math.round(cellDelta * 1000) + " mV");
+    this._setText("temp-low", tempLow === null ? "—" : tempLow.toFixed(1) + " °C");
+    this._setText("temp-high", tempHigh === null ? "—" : tempHigh.toFixed(1) + " °C");
+    this._setText("temp-delta", tempDelta === null ? "—" : tempDelta.toFixed(1) + " K");
+
+    const fill = this.shadowRoot.getElementById("battery-fill");
+    if (fill) fill.style.height = Math.max(0, Math.min(100, soc ?? 0)) * 0.84 + "px";
+
+    const status = this.shadowRoot.getElementById("status");
+    if (status) status.classList.toggle("warn", warning.active);
+
+    const warningBox = this.shadowRoot.getElementById("warning-box");
+    const warningIcon = this.shadowRoot.getElementById("warning-icon");
+    if (warningBox) warningBox.classList.toggle("active", warning.active);
+    if (warningIcon) warningIcon.setAttribute("icon", warning.active ? "mdi:alert-circle" : "mdi:check-circle");
+    this._setText("warning-title", warning.active ? "BMS-Warnung aktiv" : "Batterie arbeitet normal");
+    this._setText("warning-message", warning.message);
+
+    const modules = this._moduleRows();
+    for (const [bmu, values] of modules) {
+      const row = this.shadowRoot.querySelector(`.module[data-bmu="${CSS.escape(String(bmu))}"]`);
+      if (!row) continue;
+
+      const formatEntity = (entityId, digits, unit) => {
+        const value = Number(this._hass.states?.[entityId]?.state);
+        return Number.isFinite(value) ? value.toFixed(digits) + " " + unit : "—";
+      };
+
+      const socEl = row.querySelector('[data-field="soc"]');
+      const voltEl = row.querySelector('[data-field="volt"]');
+      const tempEl = row.querySelector('[data-field="temp"]');
+      if (socEl) socEl.textContent = formatEntity(values.charge_ah_perc, 0, "%");
+      if (voltEl) voltEl.textContent = formatEntity(values.volt, 2, "V");
+      if (tempEl) tempEl.textContent = formatEntity(values.temp, 1, "°C");
+    }
+
+    for (const cell of this._cellRows()) {
+      const row = [...this.shadowRoot.querySelectorAll(".cell")].find((el) => el.dataset.cell === cell.entityId);
+      if (!row) continue;
+      const value = Number(this._hass.states?.[cell.entityId]?.state);
+      const strong = row.querySelector("strong");
+      if (strong) strong.textContent = Number.isFinite(value) ? value.toFixed(3) + " V" : "—";
+    }
+  }
+
 }
 
 class PylontechHvCardEditor extends HTMLElement {
