@@ -1,10 +1,11 @@
-const CARD_VERSION = "1.0.2";
+const CARD_VERSION = "1.0.3";
 
 const DEFAULT_CONFIG = {
   name: "Pylontech HV BMS",
   show_modules: true,
   show_cells: false,
   show_diagnostics: true,
+  show_source_bmu: true,
 };
 
 const IDS = {
@@ -453,10 +454,11 @@ class PylontechHvCard extends HTMLElement {
     const tempLowBmu = this._findBmuForExtreme("cell_temp_low", tempLow);
     const tempHighBmu = this._findBmuForExtreme("cell_temp_high", tempHigh);
 
-    this._setText("cell-low-source", cellLowBmu !== null ? "aus BMU " + cellLowBmu : "");
-    this._setText("cell-high-source", cellHighBmu !== null ? "aus BMU " + cellHighBmu : "");
-    this._setText("temp-low-source", tempLowBmu !== null ? "aus BMU " + tempLowBmu : "");
-    this._setText("temp-high-source", tempHighBmu !== null ? "aus BMU " + tempHighBmu : "");
+    const showSourceBmu = this._config.show_source_bmu !== false;
+    this._setText("cell-low-source", showSourceBmu && cellLowBmu !== null ? "aus BMU " + cellLowBmu : "");
+    this._setText("cell-high-source", showSourceBmu && cellHighBmu !== null ? "aus BMU " + cellHighBmu : "");
+    this._setText("temp-low-source", showSourceBmu && tempLowBmu !== null ? "aus BMU " + tempLowBmu : "");
+    this._setText("temp-high-source", showSourceBmu && tempHighBmu !== null ? "aus BMU " + tempHighBmu : "");
 
     const fill = this.shadowRoot.getElementById("battery-fill");
     if (fill) fill.style.height = Math.max(0, Math.min(100, soc ?? 0)) * 0.84 + "px";
@@ -550,6 +552,7 @@ class PylontechHvCardEditor extends HTMLElement {
         <div class="row"><label>Module anzeigen</label><ha-switch id="modules" ${this._config.show_modules ? "checked" : ""}></ha-switch></div>
         <div class="row"><label>Zellen anzeigen</label><ha-switch id="cells" ${this._config.show_cells ? "checked" : ""}></ha-switch></div>
         <div class="row"><label>Diagnose anzeigen</label><ha-switch id="diag" ${this._config.show_diagnostics ? "checked" : ""}></ha-switch></div>
+        <div class="row"><label>BMU-Herkunft anzeigen</label><ha-switch id="sourcebmu" ${this._config.show_source_bmu ? "checked" : ""}></ha-switch></div>
       </div>
     `;
 
@@ -563,6 +566,7 @@ class PylontechHvCardEditor extends HTMLElement {
     this.shadowRoot.getElementById("modules").addEventListener("change", (e) => this._changed("show_modules", e.target.checked));
     this.shadowRoot.getElementById("cells").addEventListener("change", (e) => this._changed("show_cells", e.target.checked));
     this.shadowRoot.getElementById("diag").addEventListener("change", (e) => this._changed("show_diagnostics", e.target.checked));
+    this.shadowRoot.getElementById("sourcebmu").addEventListener("change", (e) => this._changed("show_source_bmu", e.target.checked));
   }
 }
 
