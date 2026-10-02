@@ -34,6 +34,7 @@ Setup is intentionally simple: **select any entity belonging to your Pylontech H
 - Stored energy
 - Battery voltage and current
 - Live charge / discharge power
+- Optional BMS vs. inverter power comparison
 - BMS temperature
 - Lowest and highest cell voltage
 - Cell voltage difference
@@ -119,6 +120,7 @@ compact: false
 | `show_header_icon` | `true` | Show battery icon in the card header |
 | `show_energy` | `true` | Show stored energy below state of charge |
 | `show_cell_health` | `true` | Show the cell health section |
+| `show_power_comparison` | `true` | Show the optional BMS vs. external power comparison when configured |
 | `compact` | `false` | Reduce padding and card height for compact dashboards |
 
 ## Automatic discovery
@@ -196,3 +198,10 @@ MIT
 The card distinguishes between **real BMS warning/error states** and diagnostic measurements such as cell-voltage spread. Cell delta is shown as a measurement and no longer creates a red BMS alarm by itself.
 
 With integration v1.0.2 or newer, the card also shows the balancing-maintenance state. Pylontech Force-H2 documentation recommends a periodic full charge for balancing; the integration records observed full charges and recommends another after 90 days.
+
+
+## Optional power comparison
+
+With Pylontech HV BMS integration v1.0.3 or newer, the card automatically displays the optional external-power comparison when it is configured in the integration.
+
+It shows BMS power, external battery power, power difference and the estimated power ratio. The comparison can be hidden in the visual card editor. The value is diagnostic and is not presented as a guaranteed inverter efficiency.
