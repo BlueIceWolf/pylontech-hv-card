@@ -1,4 +1,4 @@
-const CARD_VERSION = "1.1.0";
+const CARD_VERSION = "1.1.1";
 
 const DEFAULT_CONFIG = {
   name: "Pylontech HV BMS",
@@ -30,6 +30,8 @@ const IDS = {
   tempWarning: "warn_temperature",
   voltageWarning: "warn_cell_voltage",
   bmsWarning: "warn_bms_state",
+  balanceRecommended: "balance_recommended",
+  lastFullCharge: "last_full_charge",
 };
 
 const css = `
@@ -100,6 +102,8 @@ const css = `
   .warning.active { background:rgba(var(--rgb-error-color,211,47,47),.10); }
   .warning ha-icon { color:var(--success-color,#43a047); }
   .warning.active ha-icon { color:var(--error-color,#d32f2f); }
+  .warning.maintenance { margin-top:10px; background:rgba(var(--rgb-warning-color,255,152,0),.12); }
+  .warning.maintenance ha-icon { color:var(--warning-color,#ff9800); }
   .warning-text { font-size:13px; line-height:1.4; }
   .warning-text strong { display:block; margin-bottom:2px; }
   details { margin-top:12px; border-top:1px solid var(--divider-color); padding-top:12px; }
@@ -414,7 +418,11 @@ ${this._config.show_energy ? '<div class="label" id="energy" style="margin-top:7
           <div class="section-title">Systemzustand</div>
           <div class="warning" id="warning-box">
             <ha-icon id="warning-icon" icon="mdi:check-circle"></ha-icon>
-            <div class="warning-text"><strong id="warning-title">Batterie arbeitet normal</strong><span id="warning-message">Keine Warnung</span></div>
+            <div class="warning-text"><strong id="warning-title">BMS normal</strong><span id="warning-message">Keine BMS-Warnung</span></div>
+          </div>
+          <div class="warning maintenance" id="maintenance-box">
+            <ha-icon icon="mdi:battery-sync"></ha-icon>
+            <div class="warning-text"><strong id="maintenance-title">Ausgleichsladung</strong><span id="maintenance-message">Status wird ermittelt</span></div>
           </div>
         </div>` : ""}
 
@@ -452,6 +460,8 @@ ${this._config.show_energy ? '<div class="label" id="energy" style="margin-top:7
     const tempHigh = this._num(IDS.tempHigh);
     const tempDelta = this._num(IDS.tempDelta);
     const warning = this._warningInfo();
+    const balanceDue = this._state(IDS.balanceRecommended) === "on";
+    const lastFullState = this._state(IDS.lastFullCharge);
 
     const flow = power === null ? "Leistung unbekannt" :
       Math.abs(power) < 30 ? "Ruhezustand" :
@@ -508,8 +518,13 @@ ${this._config.show_energy ? '<div class="label" id="energy" style="margin-top:7
     const warningIcon = this.shadowRoot.getElementById("warning-icon");
     if (warningBox) warningBox.classList.toggle("active", warning.active);
     if (warningIcon) warningIcon.setAttribute("icon", warning.active ? "mdi:alert-circle" : "mdi:check-circle");
-    this._setText("warning-title", warning.active ? "BMS-Warnung aktiv" : "Batterie arbeitet normal");
+    this._setText("warning-title", warning.active ? "BMS-Warnung aktiv" : "BMS normal");
     this._setText("warning-message", warning.message);
+
+    const maintenanceBox = this.shadowRoot.getElementById("maintenance-box");
+    if (maintenanceBox) maintenanceBox.style.display = balanceDue || !lastFullState || lastFullState === "unknown" || lastFullState === "unavailable" ? "flex" : "none";
+    this._setText("maintenance-title", balanceDue ? "Ausgleichsladung empfohlen" : "Ausgleichsladung");
+    this._setText("maintenance-message", balanceDue ? "Seit mindestens 90 Tagen keine Volladung erfasst." : "Noch keine Volladung durch die Integration erfasst.");
 
     const modules = this._moduleRows();
     for (const [bmu, values] of modules) {
