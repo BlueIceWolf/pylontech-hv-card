@@ -1,4 +1,4 @@
-const CARD_VERSION = "1.1.1";
+const CARD_VERSION = "1.1.2";
 
 const DEFAULT_CONFIG = {
   name: "Pylontech HV BMS",
@@ -9,6 +9,7 @@ const DEFAULT_CONFIG = {
   show_header_icon: true,
   show_energy: true,
   show_cell_health: true,
+  show_power_comparison: true,
   compact: false,
 };
 
@@ -32,6 +33,9 @@ const IDS = {
   bmsWarning: "warn_bms_state",
   balanceRecommended: "balance_recommended",
   lastFullCharge: "last_full_charge",
+  externalPower: "external_power_w",
+  powerDifference: "power_difference_w",
+  powerRatio: "power_ratio_pct",
 };
 
 const css = `
@@ -104,6 +108,9 @@ const css = `
   .warning.active ha-icon { color:var(--error-color,#d32f2f); }
   .warning.maintenance { margin-top:10px; background:rgba(var(--rgb-warning-color,255,152,0),.12); }
   .warning.maintenance ha-icon { color:var(--warning-color,#ff9800); }
+  .comparison { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+  .comparison .metric .v { font-size:16px; }
+  .comparison-note { margin-top:9px; color:var(--secondary-text-color); font-size:11px; line-height:1.35; }
   .warning-text { font-size:13px; line-height:1.4; }
   .warning-text strong { display:block; margin-bottom:2px; }
   details { margin-top:12px; border-top:1px solid var(--divider-color); padding-top:12px; }
@@ -413,6 +420,18 @@ ${this._config.show_energy ? '<div class="label" id="energy" style="margin-top:7
           </div>
         </div>` : ""}
 
+        ${this._config.show_power_comparison ? `
+        <div class="panel section" id="power-comparison-section">
+          <div class="section-title">Leistungsvergleich</div>
+          <div class="comparison">
+            <div class="metric"><div class="v" id="cmp-bms">—</div><div class="k">BMS-Leistung</div></div>
+            <div class="metric"><div class="v" id="cmp-external">—</div><div class="k">Externe Leistung</div></div>
+            <div class="metric"><div class="v" id="cmp-ratio">—</div><div class="k">Leistungsverhältnis</div></div>
+          </div>
+          <div class="comparison-note" id="cmp-difference">Differenz: —</div>
+          <div class="comparison-note">Diagnosewert – kein garantierter Wechselrichter-Wirkungsgrad. Das Verhältnis wird nur bei gleicher Leistungsrichtung und mindestens 300 W berechnet.</div>
+        </div>` : ""}
+
         ${this._config.show_diagnostics ? `
         <div class="panel section">
           <div class="section-title">Systemzustand</div>
@@ -459,6 +478,9 @@ ${this._config.show_energy ? '<div class="label" id="energy" style="margin-top:7
     const tempLow = this._num(IDS.tempLow);
     const tempHigh = this._num(IDS.tempHigh);
     const tempDelta = this._num(IDS.tempDelta);
+    const externalPower = this._num(IDS.externalPower);
+    const powerDifference = this._num(IDS.powerDifference);
+    const powerRatio = this._num(IDS.powerRatio);
     const warning = this._warningInfo();
     const balanceDue = this._state(IDS.balanceRecommended) === "on";
     const lastFullState = this._state(IDS.lastFullCharge);
@@ -490,6 +512,12 @@ ${this._config.show_energy ? '<div class="label" id="energy" style="margin-top:7
     this._setText("voltage", voltage === null ? "—" : voltage.toFixed(1) + " V");
     this._setText("current", current === null ? "—" : current.toFixed(1) + " A");
     this._setText("temperature", temp === null ? "—" : temp.toFixed(1) + " °C");
+    this._setText("cmp-bms", power === null ? "—" : (power / 1000).toFixed(2) + " kW");
+    this._setText("cmp-external", externalPower === null ? "—" : (externalPower / 1000).toFixed(2) + " kW");
+    this._setText("cmp-ratio", powerRatio === null ? "—" : powerRatio.toFixed(1) + " %");
+    this._setText("cmp-difference", "Differenz: " + (powerDifference === null ? "—" : (powerDifference / 1000).toFixed(2) + " kW"));
+    const comparisonSection = this.shadowRoot.getElementById("power-comparison-section");
+    if (comparisonSection) comparisonSection.style.display = externalPower === null ? "none" : "block";
     this._setText("cell-low", cellLow === null ? "—" : cellLow.toFixed(3) + " V");
     this._setText("cell-high", cellHigh === null ? "—" : cellHigh.toFixed(3) + " V");
     this._setText("cell-delta", cellDelta === null ? "—" : Math.round(cellDelta * 1000) + " mV");
@@ -609,6 +637,7 @@ class PylontechHvCardEditor extends HTMLElement {
         <div class="row"><label>Header-Icon anzeigen</label><ha-switch id="headericon" ${this._config.show_header_icon ? "checked" : ""}></ha-switch></div>
         <div class="row"><label>Gespeicherte Energie anzeigen</label><ha-switch id="energytoggle" ${this._config.show_energy ? "checked" : ""}></ha-switch></div>
         <div class="row"><label>Zellgesundheit anzeigen</label><ha-switch id="cellhealth" ${this._config.show_cell_health ? "checked" : ""}></ha-switch></div>
+        <div class="row"><label>Leistungsvergleich anzeigen</label><ha-switch id="powercomparison" ${this._config.show_power_comparison ? "checked" : ""}></ha-switch></div>
         <div class="row"><label>Kompakte Ansicht</label><ha-switch id="compact" ${this._config.compact ? "checked" : ""}></ha-switch></div>
       </div>
     `;
@@ -627,6 +656,7 @@ class PylontechHvCardEditor extends HTMLElement {
     this.shadowRoot.getElementById("headericon").addEventListener("change", (e) => this._changed("show_header_icon", e.target.checked));
     this.shadowRoot.getElementById("energytoggle").addEventListener("change", (e) => this._changed("show_energy", e.target.checked));
     this.shadowRoot.getElementById("cellhealth").addEventListener("change", (e) => this._changed("show_cell_health", e.target.checked));
+    this.shadowRoot.getElementById("powercomparison").addEventListener("change", (e) => this._changed("show_power_comparison", e.target.checked));
     this.shadowRoot.getElementById("compact").addEventListener("change", (e) => this._changed("compact", e.target.checked));
   }
 }
