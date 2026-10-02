@@ -189,3 +189,10 @@ When reporting a display issue, it is helpful to include:
 ## License
 
 MIT
+
+
+### BMS warnings and balancing maintenance
+
+The card distinguishes between **real BMS warning/error states** and diagnostic measurements such as cell-voltage spread. Cell delta is shown as a measurement and no longer creates a red BMS alarm by itself.
+
+With integration v1.0.2 or newer, the card also shows the balancing-maintenance state. Pylontech Force-H2 documentation recommends a periodic full charge for balancing; the integration records observed full charges and recommends another after 90 days.
