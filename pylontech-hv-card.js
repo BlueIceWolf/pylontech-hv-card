@@ -426,10 +426,10 @@ ${this._config.show_energy ? '<div class="label" id="energy" style="margin-top:7
           <div class="comparison">
             <div class="metric"><div class="v" id="cmp-bms">—</div><div class="k">BMS-Leistung</div></div>
             <div class="metric"><div class="v" id="cmp-external">—</div><div class="k">Externe Leistung</div></div>
-            <div class="metric"><div class="v" id="cmp-ratio">—</div><div class="k">Leistungsverhältnis</div></div>
+            <div class="metric"><div class="v" id="cmp-ratio">—</div><div class="k">Geschätzter Wirkungsgrad</div></div>
           </div>
           <div class="comparison-note" id="cmp-difference">Differenz: —</div>
-          <div class="comparison-note">Diagnosewert – kein garantierter Wechselrichter-Wirkungsgrad. Das Verhältnis wird nur bei gleicher Leistungsrichtung und mindestens 300 W berechnet.</div>
+          <div class="comparison-note">Diagnosewert – geschätzter Wirkungsgrad aus BMS- und externer Leistung. Laden und Entladen werden richtungsabhängig berechnet; aktiv ab 300 W bei gleicher Leistungsrichtung.</div>
         </div>` : ""}
 
         ${this._config.show_diagnostics ? `
